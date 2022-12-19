@@ -1,4 +1,4 @@
-const { createUsername, generateVerifyCode } = require('../helper');
+const { generateVerifyCode, crypto } = require('../helper');
 const bcrypt = require('bcryptjs');
 const {
   isExistAccount,
@@ -14,12 +14,7 @@ const {
   updateAvt,
   updateProfile,
 } = require('../services/account.service');
-const {
-  COOKIE_EXPIRES_TIME,
-  KEYS,
-  ACCOUNT_TYPES,
-  MAX,
-} = require('../constant');
+const { ACCOUNT_TYPES, MAX } = require('../constant');
 const jwtConfig = require('../configs/jwt.config');
 const express = require('express');
 const app = express();
@@ -29,20 +24,25 @@ const {
   checkVerifyCode,
   removeVerifyCode,
 } = require('../services/common.service');
+const twoFAController = require('./2fa.controller');
+const { verifyOTPToken } = require('../helper/2fa');
 
 exports.postRegisterAccount = async (req, res) => {
   try {
     const { name, password } = req.body;
     const email = req.body.email?.toLowerCase();
+    const username = req.body.username?.toLowerCase();
+
+    const isExist = await isExistAccount(username);
 
     // check account existence
-    const isExist = await isExistAccount(email);
     if (isExist) {
-      return res.status(400).json({ message: 'Email đã được sử dụng' });
+      return res.status(400).json({ message: 'Username already in use' });
     }
 
     // create an account
     const newAccountId = await createAccount(
+      username,
       email,
       password,
       ACCOUNT_TYPES.LOCAL,
@@ -50,45 +50,65 @@ exports.postRegisterAccount = async (req, res) => {
     if (!newAccountId) {
       return res
         .status(409)
-        .json({ message: 'Tạo tài khoản thất bại, thử lại' });
+        .json({ message: 'Account creation failed, try again' });
     }
 
     // create an user
-    const username = createUsername(email, newAccountId);
     const newUser = await createUser(newAccountId, username, name);
+
     if (!newUser) {
       return res
         .status(409)
-        .json({ message: 'Tạo tài khoản thất bại, thử lại' });
+        .json({ message: 'Account creation failed, try again' });
     }
 
-    return res.status(200).json({ message: 'Tạo tài khoản thành công' });
+    return res.status(200).json({ message: 'Create Account Success' });
   } catch (error) {
     console.error('POST REGISTER ACCOUNT ERROR: ', error);
-    return res.status(503).json({ message: 'Lỗi dịch vụ, thử lại sau' });
+    return res.status(503).json({
+      message: 'An error occurred, please try again later !',
+    });
   }
 };
 
 exports.postLogin = async (req, res) => {
   try {
-    const email = req.body.email?.toLowerCase();
-    const { password } = req.body;
+    const { password, username, otpToken } = req.body;
 
     // check account existence
-    const account = await findAccount(email);
+    const account = await findAccount(username);
     if (!account) {
-      return res.status(406).json({ message: 'Tài khoản không tồn tại' });
+      return res.status(406).json({ message: 'Account does not exist' });
     }
 
     // check password
-    const isMatch = await bcrypt.compare(password, account.password);
+    const isMatch = await account.isPasswordMatch(password);
     if (!isMatch) {
-      return res.status(401).json({ message: 'Mật khẩu không đúng' });
+      return res.status(401).json({ message: 'Incorrect password' });
+    }
+
+    // check 2FA
+    if (account.twoFASecret) {
+      if (otpToken) {
+        const isValid = verifyOTPToken(
+          otpToken,
+          crypto.decrypt(account.twoFASecret),
+        );
+        if (!isValid) {
+          return res.status(401).json({ message: 'Incorrect OTP token' });
+        }
+      } else {
+        return res.status(200).json({
+          isNeedOTP: true,
+          message: '2FA is enabled, please enter OTP token to login',
+          token: null,
+        });
+      }
     }
 
     // set cookie with jwt
     const token = await jwtConfig.encodedToken(
-      process.env.JWT_SECRET_KEY || 'dynonary-serect',
+      process.env.JWT_SECRET_KEY || 'amonino-serect',
       { accountId: account._id },
     );
 
@@ -98,7 +118,9 @@ exports.postLogin = async (req, res) => {
     });
   } catch (error) {
     console.error('POST REGISTER ACCOUNT ERROR: ', error);
-    return res.status(503).json({ message: 'Lỗi dịch vụ, thử lại sau' });
+    return res.status(503).json({
+      message: 'An error occurred, please try again later !',
+    });
   }
 };
 
@@ -106,7 +128,7 @@ exports.postLoginSocialNetwork = async (req, res) => {
   try {
     const { user } = req;
     if (!Boolean(user)) {
-      return res.status(401).json({ message: 'Đăng nhập thất bại, thử lại' });
+      return res.status(401).json({ message: 'Login failed, try again' });
     }
 
     const { email, name, avt, id, type } = user;
@@ -117,7 +139,7 @@ exports.postLoginSocialNetwork = async (req, res) => {
     if (!account) {
       accountId = await createAccount(email, '', type);
       if (!accountId) {
-        return res.status(401).json({ message: 'Đăng nhập thất bại, thử lại' });
+        return res.status(401).json({ message: 'Login failed, try again' });
       }
 
       const username = `${name}-${id}`.slice(0, MAX.USER_NAME).toLowerCase();
@@ -128,7 +150,7 @@ exports.postLoginSocialNetwork = async (req, res) => {
 
     // set cookie with jwt
     const token = await jwtConfig.encodedToken(
-      process.env.JWT_SECRET_KEY || 'dynonary-serect',
+      process.env.JWT_SECRET_KEY || 'amonino-serect',
       { accountId },
     );
 
@@ -138,31 +160,37 @@ exports.postLoginSocialNetwork = async (req, res) => {
     });
   } catch (error) {
     console.error('LOGIN WITH GG ERROR: ', error);
-    return res.status(500).json({ message: 'Lỗi dịch vụ, thử lại sau' });
+    return res.status(500).json({
+      message: 'An error occurred, please try again later !',
+    });
   }
 };
 
 exports.postResetPassword = async (req, res) => {
   try {
-    const { email, verifyCode, password } = req.body;
+    const { username, verifyCode, password } = req.body;
 
-    const { status, message } = await checkVerifyCode(verifyCode, email);
+    const { status, message } = await checkVerifyCode(verifyCode, username);
     if (!status) {
       return res.status(400).json({ message });
     }
 
-    const isUpdated = await updatePassword(email, password);
+    const isUpdated = await updatePassword(username, password);
 
-    removeVerifyCode(email);
+    removeVerifyCode(username);
 
     if (isUpdated) {
       return res.status(200).json({ message: 'success' });
     }
 
-    return res.status(500).json({ message: 'Lỗi dịch vụ, thử lại sau' });
+    return res.status(500).json({
+      message: 'An error occurred, please try again later !',
+    });
   } catch (error) {
     console.error('POST RESET PASSOWORD ERROR: ', error);
-    return res.status(500).json({ message: 'Lỗi dịch vụ, thử lại sau' });
+    return res.status(500).json({
+      message: 'An error occurred, please try again later !',
+    });
   }
 };
 
@@ -178,7 +206,7 @@ exports.putToggleFavorite = async (req, res) => {
       if (isLimited) {
         return res.status(409).json({
           message:
-            'Số từ đã vượt quá số lượng tối đa của danh sách yêu thích. Hãy nâng cấp nó.',
+            'The word count has exceeded the maximum number of favorites. Please upgrade it.',
         });
       }
 
@@ -191,7 +219,7 @@ exports.putToggleFavorite = async (req, res) => {
       if (!isExist) {
         return res
           .status(406)
-          .json({ message: `Từ ${word} không tồn tại trong danh sách` });
+          .json({ message: `The word ${word} already exists in the list` });
       }
     }
 
@@ -204,7 +232,9 @@ exports.putToggleFavorite = async (req, res) => {
     }
   } catch (error) {
     console.error('PUT TOGGLE FAVORITE ERROR: ', error);
-    return res.status(503).json({ message: 'Lỗi dịch vụ, thử lại sau' });
+    return res.status(503).json({
+      message: 'An error occurred, please try again later !',
+    });
   }
 };
 
@@ -225,7 +255,9 @@ exports.putUpdateUserCoin = async (req, res) => {
     return res.status(406).json({ message: 'Not Accept' });
   } catch (error) {
     console.error('PUT UPDATE USER COIN ERROR: ', error);
-    return res.status(503).json({ message: 'Lỗi dịch vụ, thử lại sau' });
+    return res.status(503).json({
+      message: 'An error occurred, please try again later !',
+    });
   }
 };
 
@@ -244,27 +276,39 @@ exports.putUpdateAvt = async (req, res, next) => {
     return res.status(200).json({ newSrc: update });
   } catch (error) {
     console.error('PUT UPDATE AVT ERROR: ', error);
-    return res.status(500).json({ message: 'Lỗi dịch vụ, thử lại sau' });
+    return res.status(500).json({
+      message: 'An error occurred, please try again later !',
+    });
   }
 };
 
 exports.putUpdateProfile = async (req, res, next) => {
   try {
     const { user } = req;
-    const { name, username } = req.body;
+    const { name, email } = req.body;
     if (!Boolean(user)) {
-      return res.status(400).json({ message: 'Cập nhập thất bại' });
+      return res.status(400).json({ message: 'Update failed' });
     }
 
-    const update = await updateProfile(user.username, name, username);
-    if (!update.status) {
-      return res.status(400).json({ message: update.message });
+    const dataUpdate = {};
+    if (Boolean(name) && name !== user.name) {
+      dataUpdate.name = name;
+    }
+    if (Boolean(email) && email !== user.email) {
+      dataUpdate.email = crypto.encrypt(email);
     }
 
-    return res.status(200).json({ message: 'success' });
+    const update = await updateProfile({
+      username: user.username,
+      data: dataUpdate,
+    });
+
+    return res.status(200).json(update);
   } catch (error) {
     console.error('PUT UPDATE PROFILE ERROR: ', error);
-    return res.status(500).json({ message: 'Lỗi dịch vụ, thử lại sau' });
+    return res.status(500).json({
+      message: 'An error occurred, please try again later !',
+    });
   }
 };
 
@@ -283,33 +327,37 @@ exports.getUserInfo = async (req, res) => {
 
 exports.getVerifyCode = async (req, res) => {
   try {
-    const { email } = req.query;
-    if (!Boolean(email)) {
-      return res.status(400).json({ message: 'Tài khoản không tồn tại' });
+    const { username } = req.body;
+    if (!Boolean(username)) {
+      return res.status(400).json({ message: 'Please enter you username' });
     }
 
-    const isExist = await isExistAccount(email);
-    if (!isExist) {
-      return res.status(400).json({ message: 'Tài khoản không tồn tại' });
+    // check account existence
+    const account = await findAccount(username);
+    if (!account) {
+      return res.status(406).json({ message: 'Account does not exist' });
     }
+    const emailReceiveCode = crypto.decrypt(account.email);
 
     const verifyCode = generateVerifyCode(MAX.VERIFY_CODE);
 
     const mail = {
-      to: email,
-      subject: 'Mã xác nhận đổi mật khẩu',
+      to: emailReceiveCode,
+      subject: 'Password change confirmation code',
       html: mailConfig.htmlResetPassword(verifyCode),
     };
 
     await mailConfig.sendEmail(mail);
-    saveVerifyCode(verifyCode, email);
+    saveVerifyCode(verifyCode, username);
 
-    return res
-      .status(200)
-      .json({ message: 'Gửi mã thành công. Hãy kiểm tra Email của bạn' });
+    return res.status(200).json({
+      message: `Code sent successfully. Please check your Email : ${emailReceiveCode}`,
+    });
   } catch (error) {
     console.error('GET VERIFY CODE ERROR: ', error);
-    return res.status(500).json({ message: 'Lỗi dịch vụ, thử lại sau' });
+    return res.status(500).json({
+      message: 'An error occurred, please try again later !',
+    });
   }
 };
 
@@ -324,12 +372,12 @@ exports.getUserProfile = async (req, res, next) => {
     if (!userInfo) {
       return res.status(403).json({ message: 'failed' });
     }
-
-    return res
-      .status(200)
-      .json({ email: userInfo.email, createdDate: userInfo.createdDate });
+    userInfo.email = crypto.decrypt(userInfo.email);
+    return res.status(200).json(userInfo);
   } catch (error) {
     console.error('GET USER PROFILE ERROR: ', error);
-    return res.status(500).json({ message: 'Lỗi dịch vụ, thử lại sau' });
+    return res.status(500).json({
+      message: 'An error occurred, please try again later !',
+    });
   }
 };

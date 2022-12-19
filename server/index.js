@@ -1,4 +1,3 @@
-// set environment variables
 require('dotenv').config();
 
 // import third-party
@@ -19,13 +18,15 @@ const flashcardApi = require('./src/apis/flashcard.api');
 const commonApi = require('./src/apis/common.api');
 const sentenceApi = require('./src/apis/sentence.api');
 const blogApi = require('./src/apis/blog.api');
-const highscoreApi = require('./src/apis/highscore.api');
+const rankApi = require('./src/apis/rank.api');
+const topicApi = require('./src/apis/topics.api');
+const twoFAApi = require('./src/apis/2fa.api');
 const passportConfig = require('./src/middlewares/passport.middleware');
 
 // ================== set port ==================
 const app = express();
-const normalizePort = (port) => parseInt(port, 10);
-const PORT = normalizePort(process.env.PORT || 3000);
+const normalizePort = port => parseInt(port, 10);
+const PORT = normalizePort(process.env.PORT || 8089);
 
 // ================== setup ==================
 app.use(express.static(path.join(__dirname, '/src/build')));
@@ -51,7 +52,7 @@ if (!dev) {
 
 // ================== Connect mongodb with mongoose ==================
 const mongoose = require('mongoose');
-const MONGO_URL = dev ? process.env.MONGO_URL_LOCAL : process.env.MONGO_URL;
+const MONGO_URL = process.env.MONGO_URL;
 
 mongoose.connect(MONGO_URL, {
   useUnifiedTopology: true,
@@ -79,11 +80,10 @@ app.use(`${BASE_URL}/flashcard`, flashcardApi);
 app.use(`${BASE_URL}/common`, commonApi);
 app.use(`${BASE_URL}/sentence`, sentenceApi);
 app.use(`${BASE_URL}/blog`, blogApi);
-app.use(
-  `${BASE_URL}/highscore`,
-  passportConfig.jwtAuthentication,
-  highscoreApi,
-);
+app.use(`${BASE_URL}/topic`, topicApi);
+app.use(`${BASE_URL}/rank`, rankApi);
+app.use(`${BASE_URL}/2fa`, twoFAApi);
+app.use(`${BASE_URL}/rank`, rankApi);
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '/src/build', 'index.html'));

@@ -23,6 +23,6 @@ const userSchema = new Schema({
   favoriteList: [String],
 });
 
-const UserModel = mongoose.model('user', userSchema, 'users');
+const UserModel = mongoose.model('userV2', userSchema, 'usersV2');
 
 module.exports = UserModel;

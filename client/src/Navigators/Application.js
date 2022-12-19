@@ -1,51 +1,88 @@
-import { useTheme } from '@/Hooks';
-import { LoginScreen, StartupScreen, SignupScreen } from '@/Screens';
+import { LoginScreen, SignupScreen, ForgotPasswordScreen } from 'screens/auth';
+
+import {
+    HomeScreen,
+    FlashCardsScreen,
+    FlashCardsDetailScreen,
+    UserInfoScreen,
+    GamesScreen,
+    GameModeScreen,
+    PuzzleGameScreen,
+    GameOverScreen,
+    RankScreen,
+    FavoriteWordsScreen,
+} from 'screens/main';
+import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
+import { createDrawerNavigator } from '@react-navigation/drawer';
 import { createStackNavigator } from '@react-navigation/stack';
-import React from 'react';
-import { SafeAreaView, StatusBar } from 'react-native';
-import { MainNavigator } from './Main';
+import { StatusBar } from 'react-native';
 import { navigationRef } from './utils';
+import { useAuth } from 'hooks';
+import SplashScreen from 'react-native-splash-screen';
+import { DrawerContent } from './DrawerContent';
 
 const Stack = createStackNavigator();
+const Drawer = createDrawerNavigator();
 
 // @refresh reset
-const ApplicationNavigator = () => {
-    const { Layout, darkMode, NavigationTheme } = useTheme();
-    const { colors } = NavigationTheme;
-
-    const isLoggedIn = true;
+export const ApplicationNavigator = () => {
+    const { isLogged } = useAuth();
+    console.disableYellowBox = true;
+    useEffect(() => {
+        SplashScreen.hide();
+    });
 
     return (
-        <SafeAreaView style={[Layout.fill, { backgroundColor: colors.card }]}>
-            <NavigationContainer theme={NavigationTheme} ref={navigationRef}>
-                <StatusBar
-                    barStyle={darkMode ? 'light-content' : 'dark-content'}
-                />
-                <Stack.Navigator screenOptions={{ headerShown: false }}>
-                    <Stack.Screen name="Startup" component={StartupScreen} />
-                    {isLoggedIn ? (
-                        <React.Fragment>
-                            <Stack.Screen
-                                name="Login"
-                                component={LoginScreen}
-                            />
-                            <Stack.Screen
-                                name="Signup"
-                                component={SignupScreen}
-                            />
-                            <Stack.Screen
-                                name="Main"
-                                component={MainNavigator}
-                            />
-                        </React.Fragment>
-                    ) : (
-                        <React.Fragment />
-                    )}
+        <NavigationContainer ref={navigationRef}>
+            <StatusBar barStyle="light-content" />
+
+            {isLogged ? (
+                <Drawer.Navigator
+                    screenOptions={{
+                        headerShown: false,
+                        drawerStyle: {
+                            backgroundColor: '#505161',
+                            width: 240,
+                        },
+                    }}
+                    drawerContent={props => <DrawerContent {...props} />}
+                >
+                    <Drawer.Screen name="Home" component={HomeScreen} />
+                    <Drawer.Screen
+                        name="FlashCards"
+                        component={FlashCardsScreen}
+                    />
+                    <Drawer.Screen name="Rank" component={RankScreen} />
+                    <Drawer.Screen
+                        name="FlashCardsDetail"
+                        component={FlashCardsDetailScreen}
+                    />
+                    <Drawer.Screen name="UserInfo" component={UserInfoScreen} />
+                    <Drawer.Screen name="Games" component={GamesScreen} />
+                    <Drawer.Screen name="Puzzle" component={PuzzleGameScreen} />
+                    <Drawer.Screen name="GameMode" component={GameModeScreen} />
+                    <Drawer.Screen name="GameOver" component={GameOverScreen} />
+                    <Drawer.Screen
+                        name="FavoriteWords"
+                        component={FavoriteWordsScreen}
+                    />
+                </Drawer.Navigator>
+            ) : (
+                <Stack.Navigator
+                    initialRouteName={'Login'}
+                    screenOptions={{ headerShown: false }}
+                >
+                    <React.Fragment>
+                        <Stack.Screen name="Login" component={LoginScreen} />
+                        <Stack.Screen name="Signup" component={SignupScreen} />
+                        <Stack.Screen
+                            name="ForgotPassword"
+                            component={ForgotPasswordScreen}
+                        />
+                    </React.Fragment>
                 </Stack.Navigator>
-            </NavigationContainer>
-        </SafeAreaView>
+            )}
+        </NavigationContainer>
     );
 };
-
-export default ApplicationNavigator;

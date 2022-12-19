@@ -2,11 +2,13 @@ import 'react-native-gesture-handler';
 import React from 'react';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/lib/integration/react';
-import { store, persistor } from '@/Store';
-import ApplicationNavigator from '@/Navigators/Application';
-import './Translations';
-
-const App = () => (
+import { store, persistor } from 'store';
+import { ApplicationNavigator } from 'navigators/Application';
+import './translations';
+// ui config
+import './theme/FoundationConfig';
+import './theme/ComponentsConfig';
+export const App = () => (
     <Provider store={store}>
         {/**
          * PersistGate delays the rendering of the app's UI until the persisted state has been retrieved
@@ -15,10 +17,8 @@ const App = () => (
          * for example `loading={<SplashScreen />}`.
          * @see https://github.com/rt2zz/redux-persist/blob/master/docs/PersistGate.md
          */}
-        <PersistGate loading={null} persistor={persistor}>
+        <PersistGate persistor={persistor}>
             <ApplicationNavigator />
         </PersistGate>
     </Provider>
 );
-
-export default App;

@@ -39,7 +39,7 @@ accountApi.get(
   passportConfig.jwtAuthentication,
   accountController.getUserInfo,
 );
-accountApi.get('/send-verify-code', accountController.getVerifyCode);
+accountApi.post('/send-verify-code', accountController.getVerifyCode);
 accountApi.get(
   '/user-profile',
   passportConfig.jwtAuthentication,

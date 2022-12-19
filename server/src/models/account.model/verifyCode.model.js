@@ -9,9 +9,9 @@ const verifyCodeSchema = new Schema({
     required: true,
     trim: true,
   },
-  email: {
+  username: {
     type: String,
-    maxLength: MAX.EMAIL_LEN,
+    maxLength: MAX.USER_NAME,
     required: true,
     trim: true,
   },
@@ -23,9 +23,9 @@ const verifyCodeSchema = new Schema({
 });
 
 const VerifyCodeModel = mongoose.model(
-  'verifyCode',
+  'verifyCodeV2',
   verifyCodeSchema,
-  'verifyCodes',
+  'verifyCodesV2',
 );
 
 module.exports = VerifyCodeModel;

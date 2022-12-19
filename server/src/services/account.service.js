@@ -4,29 +4,39 @@ const AccountModel = require('../models/account.model/account.model');
 const UserModel = require('../models/account.model/user.model');
 const { uploadImage } = require('./common.service');
 
-exports.isExistAccount = async (email) => {
+exports.isExistAccount = async username => {
   try {
-    return await AccountModel.exists({ email });
+    return await AccountModel.exists({ username });
   } catch (error) {
     throw error;
   }
 };
 
-exports.findAccount = async (email) => {
+exports.findAccount = async username => {
   try {
-    return await AccountModel.findOne({ email });
+    return await AccountModel.findOne({ username });
+  } catch (error) {
+    throw error;
+  }
+};
+
+exports.update2FASecret = async ({ username, secret }) => {
+  try {
+    return await AccountModel.updateOne({ username }, { twoFASecret: secret });
   } catch (error) {
     throw error;
   }
 };
 
 exports.createAccount = async (
+  username,
   email,
   password,
   authType = ACCOUNT_TYPES.LOCAL,
 ) => {
   try {
     const newAccount = await AccountModel.create({
+      username,
       email,
       password,
       authType,
@@ -126,11 +136,14 @@ exports.updateUserCoin = async (newCoin = 0, username = '') => {
   }
 };
 
-exports.updatePassword = async (email = '', newPassword = '') => {
+exports.updatePassword = async (username = '', newPassword = '') => {
   try {
     const hashPw = await hashPassword(newPassword);
 
-    const res = await AccountModel.updateOne({ email }, { password: hashPw });
+    const res = await AccountModel.updateOne(
+      { username },
+      { password: hashPw },
+    );
 
     if (res.ok) {
       return true;
@@ -144,7 +157,7 @@ exports.updatePassword = async (email = '', newPassword = '') => {
 
 exports.updateAvt = async (username = '', avtSrc = '') => {
   try {
-    const picture = await uploadImage(avtSrc, 'dynonary/user-avt');
+    const picture = await uploadImage(avtSrc, 'amonino/user-avt');
     const isUpdated = await UserModel.updateOne({ username }, { avt: picture });
     if (isUpdated.n && isUpdated.ok) return picture;
 
@@ -154,28 +167,12 @@ exports.updateAvt = async (username = '', avtSrc = '') => {
   }
 };
 
-exports.updateProfile = async (
-  username = '',
-  newName = '',
-  newUsername = '',
-) => {
+exports.updateProfile = async ({ username, data }) => {
   try {
-    if (username.toLowerCase() !== newUsername.toLowerCase()) {
-      const isExist = await UserModel.exists({ username: newUsername });
-      if (isExist) {
-        return { status: false, message: 'username đã được sử dụng' };
-      }
-    }
+    await UserModel.updateOne({ username }, data);
+    await AccountModel.updateOne({ username }, data);
 
-    const isUpdated = await UserModel.updateOne(
-      { username },
-      { name: newName, username: newUsername },
-    );
-
-    if (isUpdated.n && isUpdated.ok)
-      return { status: true, message: 'success' };
-
-    return false;
+    return true;
   } catch (error) {
     throw error;
   }
@@ -183,9 +180,7 @@ exports.updateProfile = async (
 
 exports.getProfile = async (accountId = '') => {
   try {
-    const account = await AccountModel.findById(accountId).select(
-      'email createdDate',
-    );
+    const account = await AccountModel.findById(accountId);
     return account;
   } catch (error) {
     throw error;

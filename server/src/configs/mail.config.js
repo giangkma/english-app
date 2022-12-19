@@ -47,7 +47,7 @@ const sendEmail = async ({ to, subject, text, html, ...rest }) => {
 };
 
 const headerHtmlMail = `<h1 style="color: #018c4c; font-size: 48px; border-bottom: solid 2px #ccc;padding-bottom: 10px">
-      Learn English<br />
+      Amonino App<br />
     </h1>`;
 const footerHtmlVerifyMail = `<h3 style="color: red">
         Chú ý: Không đưa mã này cho bất kỳ ai,
@@ -57,12 +57,12 @@ const footerHtmlVerifyMail = `<h3 style="color: red">
     <h1>Cảm ơn.</h1>`;
 
 // gửi mã xác nhận
-const htmlSignupAccount = (token) => {
+const htmlSignupAccount = token => {
   return `<div>
     ${headerHtmlMail}
     <h2 style="padding: 10px 0; margin-bottom: 10px;">
         Xin chào anh (chị),<br />
-        Mã xác nhận đăng ký tài khoản cho website Learn English của bạn.<br />
+        Mã xác nhận đăng ký tài khoản cho ứng dụng Amonino của bạn.<br />
         Cảm ơn vì đã ghé thăm TTB Store <3
     </h2>
     <h3 style="background: #eee;padding: 10px;">
@@ -73,13 +73,29 @@ const htmlSignupAccount = (token) => {
 };
 
 // gửi mã đổi mật khẩu
-const htmlResetPassword = (token) => {
+const htmlResetPassword = token => {
   return `<div>
     ${headerHtmlMail}
     <h2 style="padding: 10px 0; margin-bottom: 10px;">
         Xin chào anh (chị),<br />
-        Dynon đã nhận được yêu cầu lấy lại mật khẩu từ bạn.<br />
+        Amonino đã nhận được yêu cầu lấy lại mật khẩu từ bạn.<br />
         Đừng lo lắng, hãy nhập mã này để khôi phục:
+    </h2>
+    <h1 style="background: #eee;padding: 10px;">
+      <i><b>${token}</b></i>
+    </h1>
+    ${footerHtmlVerifyMail}
+  </div>`;
+};
+
+//
+const htmlDisable2FA = token => {
+  return `<div>
+    ${headerHtmlMail}
+    <h2 style="padding: 10px 0; margin-bottom: 10px;">
+        Xin chào anh (chị),<br />
+        Amonino đã nhận được yêu cầu tắt chế độ bảo mật 2 lớp từ bạn.<br />
+        hãy nhập mã này để tiếp tục:
     </h2>
     <h1 style="background: #eee;padding: 10px;">
       <i><b>${token}</b></i>
@@ -106,4 +122,5 @@ module.exports = {
   htmlSignupAccount,
   htmlResetPassword,
   htmlWarningLogin,
+  htmlDisable2FA,
 };

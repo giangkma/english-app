@@ -1,5 +1,5 @@
 export default {
-    welcome: 'Welcome to Tongo',
+    welcome: 'Welcome to Amonino',
     actions: {
         continue: 'Continue',
     },

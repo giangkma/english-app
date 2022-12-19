@@ -64,6 +64,26 @@ exports.getWordPack = async (
   }
 };
 
+exports.getCountWordPackByTopicId = async topicId => {
+  try {
+    const result = await WordModel.countDocuments({
+      topics: { $in: [topicId] },
+    });
+    return result;
+  } catch (error) {
+    throw error;
+  }
+};
+
+exports.getWordPackByTopicId = async topicId => {
+  try {
+    const result = await WordModel.find({ topics: { $in: [topicId] } });
+    return result;
+  } catch (error) {
+    throw error;
+  }
+};
+
 exports.countWordPack = async (packInfo = {}) => {
   try {
     let query = convertPackInfoToQueryStr(packInfo);
@@ -73,14 +93,14 @@ exports.countWordPack = async (packInfo = {}) => {
   }
 };
 
-exports.saveVerifyCode = async (code = '', email = '') => {
+exports.saveVerifyCode = async (code = '', username = '') => {
   try {
     // delete old code
-    await VerifyCodeModel.deleteOne({ email });
+    await VerifyCodeModel.deleteOne({ username });
 
     const newItem = await VerifyCodeModel.create({
       code,
-      email,
+      username,
       createdDate: new Date(),
     });
     return newItem;
@@ -89,16 +109,22 @@ exports.saveVerifyCode = async (code = '', email = '') => {
   }
 };
 
-exports.checkVerifyCode = async (code = '', email = '') => {
+exports.checkVerifyCode = async (code = '', username = '') => {
   try {
-    const item = await VerifyCodeModel.findOne({ email, code });
+    const item = await VerifyCodeModel.findOne({ username });
 
     if (!item) {
-      return { status: false, message: 'Hãy gửi mã để nhận mã xác thực.' };
+      return {
+        status: false,
+        message: 'No verification code exists for username : ' + username,
+      };
     }
 
     if (item.code !== code) {
-      return { status: false, message: 'Mã xác thực không đúng.' };
+      return {
+        status: false,
+        message: 'The verification code is not correct.',
+      };
     }
 
     const d = new Date().getTime(),
@@ -107,7 +133,7 @@ exports.checkVerifyCode = async (code = '', email = '') => {
     if (d - createdDate > MAX.VERIFY_TIME) {
       return {
         status: false,
-        message: 'Mã xác thực đã hết hiệu lực. Hãy lấy một mã khác',
+        message: "The verification code has expired. Let's get another code",
       };
     }
 
@@ -117,6 +143,6 @@ exports.checkVerifyCode = async (code = '', email = '') => {
   }
 };
 
-exports.removeVerifyCode = async (email = '') => {
-  await VerifyCodeModel.deleteOne({ email });
+exports.removeVerifyCode = async (username = '') => {
+  await VerifyCodeModel.deleteOne({ username });
 };

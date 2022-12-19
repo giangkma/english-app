@@ -5,6 +5,7 @@ const { KEYS, ACCOUNT_TYPES } = require('../constant');
 const passport = require('passport');
 const GooglePlusTokenStrategy = require('passport-google-token').Strategy;
 const FacebookTokenStrategy = require('passport-facebook-token');
+const AccountModel = require('../models/account.model/account.model');
 
 // Authentication with JWT
 exports.jwtAuthentication = async (req, res, next) => {
@@ -17,7 +18,7 @@ exports.jwtAuthentication = async (req, res, next) => {
       !(req.cookies && req.cookies.__session);
 
     if (isTokenEmpty) {
-      return next();
+      throw new Error('Token is empty');
     }
 
     let token = null;
@@ -37,22 +38,27 @@ exports.jwtAuthentication = async (req, res, next) => {
 
     // if not exist cookie[access_token] -> isAuth = false -> next
     if (!token) {
-      return next();
+      throw new Error('Token is empty');
     }
 
     // verify jwt
     const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
     if (decoded) {
       const { accountId } = decoded.sub;
-      let user = await UserModel.findOne({ accountId }).select(
+      const user = await UserModel.findOne({ accountId }).select(
         '-_id username name avt favoriteList coin',
       );
+      if (!user) throw Error();
+      const account = await AccountModel.findOne({
+        username: user.username,
+      });
 
       if (user) {
         user.accountId = accountId;
         res.locals.isAuth = true;
         req.user = user;
       }
+      if (account) req.account = account;
     }
     next();
   } catch (error) {

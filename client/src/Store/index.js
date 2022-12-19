@@ -11,32 +11,27 @@ import {
     REGISTER,
 } from 'redux-persist';
 import { configureStore } from '@reduxjs/toolkit';
-import { setupListeners } from '@reduxjs/toolkit/query';
 
-import { api } from '@/Services/api';
-import * as modules from '@/Services/modules';
-import theme from './Theme';
+import theme from './theme';
+import auth from './auth';
+import flashCards from './flashCards';
 
 const reducers = combineReducers({
     theme,
-    ...Object.values(modules).reduce(
-        (acc, module) => ({
-            ...acc,
-            [module.reducerPath]: module.reducer,
-        }),
-        {},
-    ),
+    auth,
+    flashCards,
 });
 
 const persistConfig = {
     key: 'root',
     storage: AsyncStorage,
-    whitelist: ['theme'],
+    whitelist: ['auth', 'flashCards'],
 };
 
 const persistedReducer = persistReducer(persistConfig, reducers);
 
 const store = configureStore({
+    devTools: process.env.NODE_ENV !== 'production',
     reducer: persistedReducer,
     middleware: getDefaultMiddleware => {
         const middlewares = getDefaultMiddleware({
@@ -50,7 +45,7 @@ const store = configureStore({
                     REGISTER,
                 ],
             },
-        }).concat(api.middleware);
+        });
 
         if (__DEV__ && !process.env.JEST_WORKER_ID) {
             const createDebugger = require('redux-flipper').default;
@@ -62,7 +57,5 @@ const store = configureStore({
 });
 
 const persistor = persistStore(store);
-
-setupListeners(store.dispatch);
 
 export { store, persistor };

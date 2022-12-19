@@ -37,3 +37,15 @@ exports.MIN = {
 exports.NUM_OF_TOPICS = 30;
 
 exports.NUM_OF_SPECIALTY = 30;
+
+exports.REVIEW_STATUS_LOGS = {
+  FINISHED: 'finished',
+  UN_FINISHED: 'un-finished',
+  CANCELLED: 'cancelled',
+};
+
+exports.GAMES = {
+  PUZZLE: 'puzzle',
+};
+
+exports.NUM_WORDS_LEARN_IN_REVIEW = 5;

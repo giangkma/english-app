@@ -1,20 +1,19 @@
 module.exports = {
     env: {
-        'jest/globals': true,
+        browser: true,
+        es2021: true,
     },
-    root: true,
-    extends: ['@react-native-community'],
-    plugins: ['jest'],
+    extends: ['standard'],
+    parserOptions: {
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+    },
     rules: {
-        'object-curly-spacing': ['error', 'always'],
-        'array-bracket-spacing': ['error', 'never'],
-        'react/require-default-props': ['error'],
-        'react/default-props-match-prop-types': ['error'],
-        'react/sort-prop-types': ['error'],
-    },
-    settings: {
-        'import/resolver': {
-            'babel-module': {},
-        },
+        semi: 0,
+        indent: 0,
+        'comma-dangle': 0,
+        'no-unused-vars': 0,
+        camelcase: 0,
+        'multiline-ternary': 0,
     },
 };
