@@ -7,6 +7,7 @@ const images = {
     banner: require('./images/app-banner.png'),
     flashcard: require('./images/flashcard.png'),
     game: require('./images/game-mock-img.png'),
+    soccer: require('./images/soccer.png'),
     gamePractice: require('./images/game-practice.png'),
     gameRanking: require('./images/game-ranking.png'),
     gameSpeaker: require('./images/game-speaker.png'),
@@ -19,6 +20,6 @@ const icons = {
     sentenceIcon: require('./images/sentence-icon.png'),
     vocabularyIcon: require('./images/vocabulary-icon.png'),
     playGameIcon: require('./images/playgame-icon.png'),
-}
+};
 
 export { icons, images };

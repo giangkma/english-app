@@ -19,6 +19,13 @@ export const GamesScreen = () => {
                             })
                         }
                     />
+                    <GameCard
+                        image={Images.soccer}
+                        name={'Soccer'}
+                        onPress={() =>
+                            navigate('Soccer')
+                        }
+                    />
                 </View>
             </View>
         </StackLayout>

@@ -21,6 +21,7 @@ import { navigationRef } from './utils';
 import { useAuth } from 'hooks';
 import SplashScreen from 'react-native-splash-screen';
 import { DrawerContent } from './DrawerContent';
+import SoccerGameScreen from 'screens/main/games/SoccerGameScreen';
 
 const Stack = createStackNavigator();
 const Drawer = createDrawerNavigator();
@@ -61,6 +62,7 @@ export const ApplicationNavigator = () => {
                     <Drawer.Screen name="UserInfo" component={UserInfoScreen} />
                     <Drawer.Screen name="Games" component={GamesScreen} />
                     <Drawer.Screen name="Puzzle" component={PuzzleGameScreen} />
+                    <Drawer.Screen name="Soccer" component={SoccerGameScreen} />
                     <Drawer.Screen name="GameMode" component={GameModeScreen} />
                     <Drawer.Screen name="GameOver" component={GameOverScreen} />
                     <Drawer.Screen
