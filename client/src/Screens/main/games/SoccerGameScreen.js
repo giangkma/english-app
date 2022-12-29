@@ -3,9 +3,15 @@ import { View, Text, StyleSheet, Dimensions, Image } from 'react-native';
 import Score from './components/Score';
 import Emoji from './components/Emoji';
 import SoccerIcon from '../../../assets/images/soccer.png';
+import { Layout, LoadingScreen, PrimaryButton } from 'components';
+import { navigate } from 'navigators/utils';
+import { showAlert } from 'utilities';
+import { rankApi } from 'apis';
+import { Colors } from 'assets/Colors';
+import Sound from 'react-native-sound';
+import audioLost from '../../../assets/audios/lost.mp3';
 
 const LC_IDLE = 0;
-const LC_RUNNING = 1;
 const LC_TAPPED = 2;
 const GRAVITY = 0.8;
 const TAPPED_VELOCITY = 20;
@@ -31,14 +37,23 @@ class SoccerGameScreen extends Component {
             vy: 0,
             lifeCycle: LC_IDLE,
             score: 0,
-            scored: false,
             lost: false,
             rotate: 0,
+            ranks: [],
+            rankOfUser: null,
+            loading: false,
         };
+    }
+
+    sound = new Sound(audioLost);
+
+    playSound = () => {
+        this.sound?.play()
     }
 
     componentDidMount () {
         this.interval = setInterval(this.update.bind(this), 1000 / 60);
+        this.getRanks();
     }
 
     componentWillUnmount () {
@@ -48,56 +63,79 @@ class SoccerGameScreen extends Component {
     }
 
     onTap (event) {
-        if (this.state.lifeCycle === LC_TAPPED) {
-            console.log(1);
-            this.setState({
-                lifeCycle: LC_RUNNING,
-                scored: false,
-            });
-        } else {
-            console.log(2);
-            const centerX = BALL_WIDTH / 2;
-            const centerY = BALL_HEIGHT / 2;
-            const velocityX =
-                ((centerX - event.locationX) / SCREEN_WIDTH) * TAPPED_VELOCITY;
-            const velocityY = -TAPPED_VELOCITY;
-            this.setState({
-                vx: velocityX,
-                vy: velocityY,
-                score: this.state.score + 1,
-                lifeCycle: LC_TAPPED,
-                scored: true,
-                lost: false,
-            });
-        }
-        return false;
+        this.playSound();
+        // this.setState({
+        //     scored: false,
+        // });
+        // const centerX = BALL_WIDTH / 2;
+        // const centerY = BALL_HEIGHT / 2;
+        // const velocityX =
+        //     ((centerX - event.locationX) / SCREEN_WIDTH) * TAPPED_VELOCITY;
+        // const velocityY = -TAPPED_VELOCITY;
+        // this.setState({
+        //     vx: velocityX,
+        //     vy: velocityY,
+        //     score: this.state.score + 1,
+        //     lifeCycle: LC_TAPPED,
+        //     lost: false,
+        // });
+        // return false;
     }
 
     updatePosition (nextState) {
-        // nextState.x += nextState.vx;
-        // nextState.y += nextState.vy;
-        // nextState.rotate += ROTATION_FACTOR * nextState.vx;
-        // // Hit the left wall
-        // if (nextState.x < BALL_WIDTH / 2) {
-        //     nextState.vx = -nextState.vx;
-        //     nextState.x = BALL_WIDTH / 2;
-        // }
+        nextState.x += nextState.vx;
+        nextState.y += nextState.vy;
+        nextState.rotate += ROTATION_FACTOR * nextState.vx;
+        // Hit the left wall
+        if (nextState.x < BALL_WIDTH / 2) {
+            nextState.vx = -nextState.vx;
+            nextState.x = BALL_WIDTH / 2;
+        }
 
-        // // Hit the right wall
-        // if (nextState.x > SCREEN_WIDTH - BALL_WIDTH / 2) {
-        //     nextState.vx = -nextState.vx;
-        //     nextState.x = SCREEN_WIDTH - BALL_WIDTH / 2;
-        // }
+        // Hit the right wall
+        if (nextState.x > SCREEN_WIDTH - BALL_WIDTH / 2) {
+            nextState.vx = -nextState.vx;
+            nextState.x = SCREEN_WIDTH - BALL_WIDTH / 2;
+        }
 
-        // // Reset after falling down
-        // if (nextState.y > SCREEN_HEIGHT + BALL_HEIGHT) {
-        //     nextState.y = FLOOR_Y;
-        //     nextState.x = FLOOR_X;
-        //     nextState.lifeCycle = LC_IDLE;
-        //     nextState.score = 0;
-        //     nextState.lost = true;
-        //     nextState.scored = false;
-        // }
+        // Reset after falling down
+        if (nextState.y > SCREEN_HEIGHT - BALL_HEIGHT / 2) {
+            nextState.y = FLOOR_Y;
+            nextState.x = FLOOR_X;
+            nextState.lifeCycle = LC_IDLE;
+            nextState.score = 0;
+            nextState.lost = true;
+            nextState.loading = true;
+            this.updateScore();
+        }
+    }
+
+    async getRanks () {
+        try {
+            this.setState({ loading: true });
+            const { ranks, rankOfUser } = await rankApi.getRanks('soccer');
+            this.setState({
+                ranks,
+                rankOfUser,
+            });
+        } catch (error) {
+            showAlert(error.message);
+        } finally {
+            this.setState({ loading: false });
+        }
+    }
+
+    async updateScore () {
+        try {
+            if (this.state.score !== 0) {
+                await rankApi.putScore('soccer', this.state.score);
+                this.getRanks();
+            }
+        } catch (error) {
+            showAlert(error.message);
+        } finally {
+            this.setState({ loading: false });
+        }
     }
 
     updateVelocity (nextState) {
@@ -126,25 +164,70 @@ class SoccerGameScreen extends Component {
             transform: [{ rotate: this.state.rotate + 'deg' }],
         };
         return (
-            <View>
-                <Score
-                    score={this.state.score}
-                    y={SCORE_Y}
-                    scored={this.state.scored}
-                />
+            <Layout bg3>
+                <View
+                    style={{
+                        position: 'absolute',
+                        top: 10,
+                        left: 10,
+                    }}
+                >
+                    <Text style={{ color: Colors.white }}>
+                        Top 1 : {this.state.ranks?.[0]?.score || 0}
+                        {this.state.rankOfUser &&
+                            this.state.rankOfUser.rank === 1 && (
+                                <Text> (You)</Text>
+                            )}
+                    </Text>
+                    {this.state.rankOfUser &&
+                        this.state.rankOfUser.rank !== 1 && (
+                            <Text style={{ color: Colors.white }}>
+                                You : Top {this.state.rankOfUser.rank}
+                            </Text>
+                        )}
+                </View>
+                {this.state.loading && <LoadingScreen />}
+                <Score score={this.state.score} y={SCORE_Y} />
                 <Emoji
-                    scored={this.state.scored}
+                    score={this.state.score}
                     y={EMOJI_Y}
                     lost={this.state.lost}
                 />
-                <Image
-                    source={SoccerIcon}
-                    style={[styles.ball, position, rotation]}
-                    onStartShouldSetResponder={event =>
-                        this.onTap(event.nativeEvent)
-                    }
-                />
-            </View>
+                {this.state.lost ? (
+                    <View style={[styles.ball, position]}>
+                        <PrimaryButton
+                            onPress={() =>
+                                this.setState({
+                                    ...this.state,
+                                    lost: false,
+                                })
+                            }
+                            small
+                            text="Continue"
+                        />
+                        <PrimaryButton
+                            onPress={() => {
+                                this.setState({
+                                    ...this.state,
+                                    lost: false,
+                                });
+                                navigate('Games');
+                            }}
+                            style={{ marginTop: 10 }}
+                            small
+                            text="Quit"
+                        />
+                    </View>
+                ) : (
+                    <Image
+                        source={SoccerIcon}
+                        style={[styles.ball, position, rotation]}
+                        onStartShouldSetResponder={event =>
+                            this.onTap(event.nativeEvent)
+                        }
+                    />
+                )}
+            </Layout>
         );
     }
 }

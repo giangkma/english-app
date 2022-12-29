@@ -2,7 +2,7 @@ const { MAX_TOP, HIGHSCORE_NAME } = require('../constant/highscore');
 const UserModel = require('../models/account.model/user.model');
 const HighscoreModel = require('../models/highscore.model');
 
-exports.updateTop = async (accountId, name, score) => {
+exports.updateTop = async ({ accountId, name, score }) => {
   try {
     let tops = await HighscoreModel.findOne({ name });
 
@@ -31,7 +31,11 @@ exports.updateTop = async (accountId, name, score) => {
         tops.top.push({ accountId, score: Number(score) });
       } else {
         const item = tops.top[index];
-        item.score += score;
+        if ([HIGHSCORE_NAME.SOCCER_GAME.name].includes(name)) {
+          item.score = Math.max(item.score, score);
+        } else {
+          item.score += score;
+        }
       }
       newTops = tops.top;
 

@@ -1,54 +1,26 @@
+import { Colors } from 'assets/Colors';
 import React, { Component } from 'react';
 import { View, Text, StyleSheet, Dimensions, Animated } from 'react-native';
 
 class Score extends Component {
-    constructor (props) {
-        super(props);
-        this.animationConfig = {
-            toValue: 1.0,
-            duration: 200,
-        };
-        this.state = {
-            bounceValue: new Animated.Value(0),
-        };
-        this.animation = Animated.timing(
-            this.state.bounceValue,
-            this.animationConfig,
-        );
-    }
-
     render () {
         const windowWidth = Dimensions.get('window').width;
         const containerPosition = {
             top: this.props.y,
             width: windowWidth,
-            transform: [{ scale: this.state.bounceValue }],
         };
 
         return (
-            <Animated.View style={[styles.container, containerPosition]}>
+            <View style={[styles.container, containerPosition]}>
                 <Text style={styles.score}>{this.props.score}</Text>
-            </Animated.View>
+            </View>
         );
-    }
-
-    componentDidUpdate () {
-        this.bounce();
     }
 
     shouldComponentUpdate (nextProps, nextState) {
         return (
-            nextProps.scored === true && nextProps.scored !== this.props.scored
+            nextProps.score !== this.props.score
         );
-    }
-
-    componentDidMount () {
-        this.bounce();
-    }
-
-    bounce () {
-        this.state.bounceValue.setValue(0.5);
-        this.animation.start();
     }
 }
 
@@ -63,6 +35,7 @@ const styles = StyleSheet.create({
         fontSize: 100,
         fontWeight: '100',
         flex: 1,
+        color: Colors.white
     },
 });
 

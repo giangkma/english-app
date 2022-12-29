@@ -16,7 +16,7 @@ exports.putUpdateHighScore = async (req, res, next) => {
       });
     }
 
-    const data = await updateTop(accountId, name, score);
+    const data = await updateTop({ accountId, name, score });
     return res.status(200).json(data);
   } catch (error) {
     console.error('PUT UPDATE HIGHT SCORE ERROR: ', error);

@@ -15,6 +15,10 @@ exports.HIGHSCORE_NAME = {
     name: 'fast-game',
     unit: 'điểm',
   },
+  SOCCER_GAME: {
+    name: 'soccer',
+    unit: 'điểm',
+  },
 };
 
 exports.MAX_TOP = 20;

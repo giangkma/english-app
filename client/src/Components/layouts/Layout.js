@@ -9,10 +9,11 @@ import {
 import { View } from 'react-native-ui-lib';
 import { scaleSize } from 'utilities';
 
-export const Layout = ({ children, bg2, isScroll }) => {
+export const Layout = ({ children, bg2, bg3, isScroll }) => {
+    const bg = bg2 ? Images.background2 : bg3 ? Images.stadium : Images.background1;
     return (
         <ImageBackground
-            source={bg2 ? Images.background2 : Images.background1}
+            source={bg}
             resizeMode="cover"
             style={styles.container}
         >

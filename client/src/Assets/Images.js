@@ -13,6 +13,7 @@ const images = {
     gameSpeaker: require('./images/game-speaker.png'),
     speakingMan: require('./images/speaking-man.png'),
     gameHint: require('./images/game-hint.png'),
+    stadium: require('./images/stadium.jpg'),
 };
 
 const icons = {
